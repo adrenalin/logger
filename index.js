@@ -1,6 +1,8 @@
 const debug = require('debug')
 const enabled = []
 
+let maxLevel = 5
+
 module.exports = class Logger {
   /**
    * Constant for logger level NONE
@@ -75,6 +77,24 @@ module.exports = class Logger {
   }
 
   /**
+   * Maximum level for logger
+   *
+   * @return { number }               Global maximum level for the logger
+   */
+  static get MAX_LEVEL () {
+    return maxLevel
+  }
+
+  /**
+   * Set maximum allowed logger level
+   *
+   * @param { number } value          Maximum allowed level
+   */
+  static setMaxLevel (value) {
+    maxLevel = value
+  }
+
+  /**
    * Logger constructor
    *
    * @param { mixed } bindTo          String or class instance to be used for the name
@@ -107,31 +127,31 @@ module.exports = class Logger {
   setLevel (level) {
     // Set the log level to a sane value
     if (typeof level === 'number') {
-      level = Math.min(Math.max(Logger.NONE, Math.round(level)), Logger.DEBUG)
+      level = Math.min(Math.max(Logger.NONE, Math.round(level)), maxLevel)
     }
 
     switch (true) {
-      case (['none', 'NONE', Logger.NONE].indexOf(level) !== -1):
+      case (['none', 'NONE', Logger.NONE].includes(level)):
         this.level = Logger.NONE
         return this
 
-      case (['error', 'ERROR', Logger.ERROR].indexOf(level) !== -1):
+      case (['error', 'ERROR', Logger.ERROR].includes(level)):
         this.level = Logger.ERROR
         return this
 
-      case (['warn', 'warning', 'WARN', 'WARNING', Logger.WARN].indexOf(level) !== -1):
+      case (['warn', 'warning', 'WARN', 'WARNING', Logger.WARN].includes(level)):
         this.level = Logger.WARN
         return this
 
-      case (['info', 'INFO', Logger.INFO].indexOf(level) !== -1):
+      case (['info', 'INFO', Logger.INFO].includes(level)):
         this.level = Logger.INFO
         return this
 
-      case (['log', 'LOG', Logger.LOG].indexOf(level) !== -1):
+      case (['log', 'LOG', Logger.LOG].includes(level)):
         this.level = Logger.LOG
         return this
 
-      case (['debug', 'DEBUG', Logger.DEBUG].indexOf(level) !== -1):
+      case (['debug', 'DEBUG', Logger.DEBUG].includes(level)):
         this.level = Logger.DEBUG
         return this
 
