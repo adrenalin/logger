@@ -118,6 +118,10 @@ module.exports = class Logger {
     this.setLevel(level == null ? Logger.DEFAULT_LEVEL : level)
   }
 
+  writeOut (level, ...args) {
+    this.logger.apply(...args)
+  }
+
   /**
    * Set log level
    *
@@ -168,10 +172,10 @@ module.exports = class Logger {
    */
   log (...args) {
     if (this.level < Logger.LOG) {
-      return null
+      return this
     }
 
-    this.logger.apply(this, args)
+    this.writeOut(Logger.LOG, this, args)
     return this
   }
 
@@ -183,10 +187,11 @@ module.exports = class Logger {
    */
   debug (...args) {
     if (this.level < Logger.DEBUG) {
-      return null
+      return this
     }
 
-    this.logger.apply(this, args)
+    this.writeOut(Logger.DEBUG, this, args)
+    return this
   }
 
   /**
@@ -197,10 +202,11 @@ module.exports = class Logger {
    */
   info (...args) {
     if (this.level < Logger.INFO) {
-      return null
+      return this
     }
 
-    this.logger.apply(this, args)
+    this.writeOut(Logger.INFO, this, args)
+    return this
   }
 
   /**
@@ -211,10 +217,11 @@ module.exports = class Logger {
    */
   warn (...args) {
     if (this.level < Logger.WARN) {
-      return null
+      return this
     }
 
-    this.logger.apply(this, args)
+    this.writeOut(Logger.WARN, this, args)
+    return this
   }
 
   /**
@@ -235,9 +242,10 @@ module.exports = class Logger {
    */
   error (...args) {
     if (this.level < Logger.ERROR) {
-      return null
+      return this
     }
 
-    this.logger.apply(this, args)
+    this.writeOut(Logger.ERROR, this, args)
+    return this
   }
 }
