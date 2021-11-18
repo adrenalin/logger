@@ -248,4 +248,17 @@ module.exports = class Logger {
     this.writeOut(Logger.ERROR, this, args)
     return this
   }
+
+  /**
+   * Delta time from the previous call
+   *
+   * @param { mixed } ...args         0...n arguments
+   * @return { object }               This instance for chaining
+   */
+  dt (...args) {
+    const prev = this.ts || Date.now()
+    const now = this.ts = Date.now()
+    const ts = (now - prev).toFixed(0)
+    this.writeOut(ts, 'ms', ...args)
+  }
 }
