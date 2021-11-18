@@ -259,6 +259,6 @@ module.exports = class Logger {
     const prev = this.ts || Date.now()
     const now = this.ts = Date.now()
     const ts = (now - prev).toFixed(0)
-    this.writeOut(ts, 'ms', ...args)
+    this.writeOut(Logger.DEBUG, this, [`[${ts} ms]`, ...args])
   }
 }
