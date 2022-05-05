@@ -116,10 +116,26 @@ module.exports = class Logger {
     }
     this.logger = debug(bindTo)
     this.setLevel(level == null ? Logger.DEFAULT_LEVEL : level)
+    this.prepend = []
   }
 
-  writeOut (level, ...args) {
-    this.logger.apply(...args)
+  /**
+   * Write out to log
+   *
+   * @param { number } level          Logger level
+   * @param { object } context        Logger context
+   * @param { mixed } args[]          Log arguments
+   */
+  writeOut (level, context, ...args) {
+    const data = this.prepend.map(v => typeof v === 'function' ? v() : v)
+
+    this.logger.apply(context, ...data, ...args)
+  }
+
+  prepend (...args) {
+    args.forEach((v) => {
+      this.prepend.push(v)
+    })
   }
 
   /**
