@@ -2,6 +2,7 @@ const debug = require('debug')
 const enabled = []
 
 let maxLevel = 5
+let prependTimestamp = false
 
 module.exports = class Logger {
   /**
@@ -95,6 +96,15 @@ module.exports = class Logger {
   }
 
   /**
+   * Prepend timestamp to all logger entries
+   *
+   * @param { boolean } [prepend=true]  Prepend switch
+   */
+  static prependTimestamp (prepend = true) {
+    prependTimestamp = prepend
+  }
+
+  /**
    * Logger constructor
    *
    * @param { mixed } bindTo          String or class instance to be used for the name
@@ -116,26 +126,32 @@ module.exports = class Logger {
     }
     this.logger = debug(bindTo)
     this.setLevel(level == null ? Logger.DEFAULT_LEVEL : level)
-    this.prepend = []
   }
 
   /**
-   * Write out to log
+   * Write out to logger
    *
-   * @param { number } level          Logger level
-   * @param { object } context        Logger context
-   * @param { mixed } args[]          Log arguments
+   * @param { number } level          Log level
+   * @param { object } context        Context to bind
+   * @param { array } output          Output data
    */
-  writeOut (level, context, ...args) {
-    const data = this.prepend.map(v => typeof v === 'function' ? v() : v)
+  writeOut (level, context, output) {
+    const args = [context, output]
 
-    this.logger.apply(context, ...data, ...args)
-  }
+    if (!Array.isArray(output)) {
+      throw new Error('Logger.writeOut output argument has to be an array')
+    }
 
-  prepend (...args) {
-    args.forEach((v) => {
-      this.prepend.push(v)
-    })
+    if (!output.length) {
+      return
+    }
+
+    if (prependTimestamp) {
+      const d = new Date()
+      output.unshift(`[${d.toISOString()}]`)
+    }
+
+    this.logger.apply(...args)
   }
 
   /**
