@@ -105,6 +105,16 @@ module.exports = class Logger {
   }
 
   /**
+   * Prepend timestamp to all logger entries
+   *
+   * @param { boolean } [prepend=true]  Prepend switch
+   */
+  prependTimestamp (prepend = true) {
+    this.prependTimestamp = prepend
+    return this
+  }
+
+  /**
    * Logger constructor
    *
    * @param { mixed } bindTo          String or class instance to be used for the name
@@ -146,7 +156,9 @@ module.exports = class Logger {
       return
     }
 
-    if (prependTimestamp) {
+    const prepend = this.prependTimestamp != null ? this.prependTimestamp : prependTimestamp
+
+    if (prepend) {
       const d = new Date()
       output.unshift(`[${d.toISOString()}]`)
     }
