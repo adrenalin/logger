@@ -1,14 +1,53 @@
 const debug = require('debug')
 const enabled = []
+const allow = []
+const deny = []
+
+function setLists (stored) {
+  if (!stored) {
+    return
+  }
+
+  String(stored)
+    .split(',')
+    .forEach((fragment) => {
+      if (fragment.match(/^-/)) {
+        deny.push(fragment.replace(/^-/, ''))
+        return
+      }
+
+      allow.push(fragment)
+    })
+}
+
+if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+  setLists(window.localStorage.getItem('@vapaaradikaali/logger'))
+}
+
+if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
+  setLists(process.env.LOGGER)
+}
 
 let maxLevel = 5
 let prependTimestamp = false
 
+const maxLevels = []
+
+/**
+ * Logger
+ *
+ * @class Logger
+ * @example
+ *
+ *     const logger = new Logger('loggerId)
+ *     logger.error('Error level message')
+ *     logger.log('Log level message')
+ */
 module.exports = class Logger {
   /**
    * Constant for logger level NONE
    *
-   * @return { number }               Log level for NONE
+   * @const { number } Logger.NONE
    */
   static get NONE () {
     return 0
@@ -17,7 +56,7 @@ module.exports = class Logger {
   /**
    * Constant for logger level ERROR
    *
-   * @return { number }               Log level for ERROR
+   * @const { number } Logger.ERROR
    */
   static get ERROR () {
     return 1
@@ -26,7 +65,7 @@ module.exports = class Logger {
   /**
    * Constant for logger level WARN
    *
-   * @return { number }               Log level for WARN
+   * @const { number } Logger.WARN
    */
   static get WARN () {
     return 2
@@ -35,7 +74,7 @@ module.exports = class Logger {
   /**
    * Constant for logger level WARNING which is an alias for WARN
    *
-   * @return { number }               Log level for WARN
+   * @const { number } Logger.WARNING
    */
   static get WARNING () {
     return Logger.WARN
@@ -44,7 +83,7 @@ module.exports = class Logger {
   /**
    * Constant for logger level INFO
    *
-   * @return { number }               Log level for INFO
+   * @const { number } Logger.INFO
    */
   static get INFO () {
     return 3
@@ -53,7 +92,7 @@ module.exports = class Logger {
   /**
    * Constant for logger level LOG
    *
-   * @return { number }               Log level for LOG
+   * @const { number } Logger.LOG
    */
   static get LOG () {
     return 4
@@ -62,7 +101,7 @@ module.exports = class Logger {
   /**
    * Constant for logger level DEBUG
    *
-   * @return { number }               Log level for DEBUG
+   * @const { number } Logger.DEBUG
    */
   static get DEBUG () {
     return 5
@@ -71,7 +110,7 @@ module.exports = class Logger {
   /**
    * Constant for logger level NONE
    *
-   * @return { number }               Log level for NONE
+   * @const { number } Logger.DEFAULT_LEVEL
    */
   static get DEFAULT_LEVEL () {
     return 2
@@ -80,7 +119,7 @@ module.exports = class Logger {
   /**
    * Maximum level for logger
    *
-   * @return { number }               Global maximum level for the logger
+   * @const { number } Logger.MAX_LEVEL
    */
   static get MAX_LEVEL () {
     return maxLevel
@@ -89,15 +128,18 @@ module.exports = class Logger {
   /**
    * Set maximum allowed logger level
    *
+   * @method Logger.setMaxLevel
    * @param { number } value          Maximum allowed level
+   * @param { string|RegExp } pattern Pattern to match
    */
-  static setMaxLevel (value) {
+  static setMaxLevel (value, pattern) {
     maxLevel = value
   }
 
   /**
    * Prepend timestamp to all logger entries
    *
+   * @method Logger.prependTimestamp
    * @param { boolean } [prepend=true]  Prepend switch
    */
   static prependTimestamp (prepend = true) {
@@ -107,11 +149,27 @@ module.exports = class Logger {
   /**
    * Prepend timestamp to all logger entries
    *
+   * @method Logger#prependTimestamp
    * @param { boolean } [prepend=true]  Prepend switch
    */
   prependTimestamp (prepend = true) {
     this.prependTimestamp = prepend
     return this
+  }
+
+  /**
+   * Get logger name regexp
+   *
+   * @method Logger.getFragmentMatcher
+   * @param { string } fragment       Match fragment
+   * @returns { RegExp }              Match as a regular expression
+   */
+  static getFragmentMatcher (fragment) {
+    if (fragment.match(/^\/.+\/$/)) {
+      return new RegExp(fragment.replace(/^\/|\/$/g, ''))
+    }
+
+    return new RegExp(fragment.replace(/[/.\[\]\(\)]/, '\\$1'))
   }
 
   /**
@@ -134,13 +192,62 @@ module.exports = class Logger {
       enabled.push(bindTo)
       debug.enable(enabled.join(','))
     }
+
+    this.loggerName = bindTo
     this.logger = debug(bindTo)
     this.setLevel(level == null ? Logger.DEFAULT_LEVEL : level)
   }
 
   /**
+   * Can display log information
+   *
+   * @param { number } requestedLevel Requested logging level
+   * @param { number } maxLevel       Maximum allowed level
+   */
+  canDisplay (requestedLevel, maxLevel) {
+    if (requestedLevel < maxLevel) {
+      return false
+    }
+
+    if (allow.includes('*')) {
+      return true
+    }
+
+    if (deny.includes('*')) {
+      return false
+    }
+
+    if (allow.length) {
+      for (const fragment of allow) {
+        const matcher = Logger.getFragmentMatcher(fragment)
+
+        if (matcher.test(this.loggerName)) {
+          return true
+        }
+      }
+
+      return false
+    }
+
+    if (deny.length) {
+      for (const fragment of deny) {
+        const matcher = Logger.getFragmentMatcher(fragment)
+
+        if (!matcher.test(this.loggerName)) {
+          return true
+        }
+      }
+
+      return false
+    }
+
+    return true
+  }
+
+  /**
    * Write out to logger
    *
+   * @method Logger#writeOut
    * @param { number } level          Log level
    * @param { object } context        Context to bind
    * @param { array } output          Output data
@@ -169,6 +276,7 @@ module.exports = class Logger {
   /**
    * Set log level
    *
+   * @method Logger#setLevel
    * @param { mixed } level           Number or string for the log level
    * @return { object }               This instance for chaining
    */
@@ -209,28 +317,14 @@ module.exports = class Logger {
   }
 
   /**
-   * Log level output
-   *
-   * @param { mixed } ...args         0...n arguments
-   * @return { object }               This instance for chaining
-   */
-  log (...args) {
-    if (this.level < Logger.LOG) {
-      return this
-    }
-
-    this.writeOut(Logger.LOG, this, args)
-    return this
-  }
-
-  /**
    * Debug level output
    *
+   * @method Logger#debug
    * @param { mixed } ...args         0...n arguments
    * @return { object }               This instance for chaining
    */
   debug (...args) {
-    if (this.level < Logger.DEBUG) {
+    if (!this.canDisplay(this.level, Logger.DEBUG)) {
       return this
     }
 
@@ -239,13 +333,30 @@ module.exports = class Logger {
   }
 
   /**
+   * Log level output
+   *
+   * @method Logger#log
+   * @param { mixed } ...args         0...n arguments
+   * @return { object }               This instance for chaining
+   */
+  log (...args) {
+    if (!this.canDisplay(this.level, Logger.LOG)) {
+      return this
+    }
+
+    this.writeOut(Logger.LOG, this, args)
+    return this
+  }
+
+  /**
    * Info level output
    *
+   * @method Logger#info
    * @param { mixed } ...args         0...n arguments
    * @return { object }               This instance for chaining
    */
   info (...args) {
-    if (this.level < Logger.INFO) {
+    if (!this.canDisplay(this.level, Logger.INFO)) {
       return this
     }
 
@@ -256,11 +367,12 @@ module.exports = class Logger {
   /**
    * Warn level output
    *
+   * @method Logger#warn
    * @param { mixed } ...args         0...n arguments
    * @return { object }               This instance for chaining
    */
   warn (...args) {
-    if (this.level < Logger.WARN) {
+    if (!this.canDisplay(this.level, Logger.WARN)) {
       return this
     }
 
@@ -271,21 +383,21 @@ module.exports = class Logger {
   /**
    * Alias for warn level output
    *
-   * @param { mixed } ...args         0...n arguments
-   * @return { object }               This instance for chaining
+   * @alias Logger#warn
    */
-  warning (...args) {
-    return this.warn(...args)
+  get warning () {
+    return this.warn
   }
 
   /**
    * Error level output
    *
+   * @method Logger#error
    * @param { mixed } ...args         0...n arguments
    * @return { object }               This instance for chaining
    */
   error (...args) {
-    if (this.level < Logger.ERROR) {
+    if (!this.canDisplay(this.level, Logger.ERROR)) {
       return this
     }
 
@@ -296,6 +408,7 @@ module.exports = class Logger {
   /**
    * Delta time from the previous call
    *
+   * @method Logger#dt
    * @param { mixed } ...args         0...n arguments
    * @return { object }               This instance for chaining
    */
@@ -304,7 +417,7 @@ module.exports = class Logger {
     const now = this.ts = Date.now()
     const ts = (now - prev).toFixed(0)
 
-    if (this.level < Logger.ERROR) {
+    if (!this.canDisplay(this.level, Logger.LOG)) {
       return this
     }
 
