@@ -173,6 +173,48 @@ module.exports = class Logger {
   }
 
   /**
+   * Allow all log messages
+   *
+   * @method Logger.allowAll
+   */
+  static allowAll () {
+    allow.splice(0, allow.length)
+    deny.splice(0, deny.length)
+  }
+
+  /**
+   * Allow displaying log messages
+   *
+   * @method Logger.allow
+   * @param {string|array} types      Allow type or types
+   */
+  static allow (...types) {
+    types.forEach((type) => {
+      if (!Array.isArray(type)) {
+        type = [type]
+      }
+
+      allow.push(...type)
+    })
+  }
+
+  /**
+   * Deny displaying log messages
+   *
+   * @method Logger.deny
+   * @param {string|array} types      Deny type or types
+   */
+  static deny (...types) {
+    types.forEach((type) => {
+      if (!Array.isArray(type)) {
+        type = [type]
+      }
+
+      deny.push(...type)
+    })
+  }
+
+  /**
    * Logger constructor
    *
    * @param { mixed } bindTo          String or class instance to be used for the name
