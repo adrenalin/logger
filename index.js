@@ -21,7 +21,9 @@ function setLists (stored) {
 }
 
 if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
-  setLists(window.localStorage.getItem('@vapaaradikaali/logger'))
+  const stored = window.localStorage.getItem('@vapaaradikaali/logger')
+  console.log('Logger configuration from window.localStorage with key "@vapaaradikaali/logger":', stored)
+  setLists(stored)
 }
 
 if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
