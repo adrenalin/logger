@@ -2,6 +2,7 @@ const debug = require('debug')
 const enabled = []
 const allow = []
 const deny = []
+let forcedLevel = 0
 
 function setLists (stored) {
   if (!stored) {
@@ -28,6 +29,10 @@ if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined')
 
 if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
   setLists(process.env.LOGGER)
+
+  if (process.env.LOG_LEVEL) {
+    forcedLevel = Number(process.env.LOG_LEVEL)
+  }
 }
 
 let maxLevel = 5
@@ -115,7 +120,7 @@ module.exports = class Logger {
    * @const { number } Logger.DEFAULT_LEVEL
    */
   static get DEFAULT_LEVEL () {
-    return 2
+    return forcedLevel || 2
   }
 
   /**
@@ -328,6 +333,11 @@ module.exports = class Logger {
     // Set the log level to a sane value
     if (typeof level === 'number') {
       level = Math.min(Math.max(Logger.NONE, Math.round(level)), maxLevel)
+    }
+
+    if (forcedLevel) {
+      this.level = forcedLevel
+      return this
     }
 
     switch (true) {
